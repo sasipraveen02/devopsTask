@@ -1,0 +1,30 @@
+const express = require('express');
+const mysql = require('mysql2');
+
+const app = express();
+app.use(express.json());
+
+// Setup your database connection here
+const db = mysql.createConnection({
+    host: 'your-database-host',
+    user: 'your-database-user',
+    password: 'your-database-password',
+    database: 'your-database-name'
+});
+
+// Your existing routes (if any)
+
+// Add the /data endpoint
+app.get('/data', (req, res) => {
+    db.query('SELECT * FROM your_table', (err, results) => {
+        if (err) throw err;
+        res.json(results);
+    });
+});
+
+// Other routes or middleware (if any)
+
+// Start the server
+app.listen(3000, () => {
+    console.log('Server is running on port 3000');
+});
