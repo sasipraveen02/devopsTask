@@ -1,30 +1,35 @@
-const express = require('express');
-const mysql = require('mysql1');
+name: Node.js CI/CD
 
-const app = express();
-app.use(express.json());
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: 
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
 
-// Setup your database connection here
-const db = mysql.createConnection({
-    host: 'your-database-host',
-    user: 'your-database-user',
-    password: 'your-database-password',
-    database: 'your-database-name'
-});
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        project_id: your-gcp-project-id
 
-// Your existing routes (if any)
+    - name: Authenticate to Google Container Registry
+      run: gcloud auth configure-docker
 
-// Add the /data endpoint
-app.get('/data', (req, res) => {
-    db.query('SELECT * FROM your_table', (err, results) => {
-        if (err) throw err;
-        res.json(results);
-    });
-});
-
-// Other routes or middleware (if any)
-
-// Start the server
-app.listen(3000, () => {
-    console.log('Server is running on port 3000');
-});
+    - name: Build and push Docker image
+      run: |
+        docker build -t gcr.io/your-gcp-project-id/your-app:$GITHUB_SHA .
+        docker push gcr.io/your-gcp-project-id/your-app:$GITHUB_SHA
+        
+    - name: Deploy to Google Cloud Run
+      run: |
+        gcloud run deploy your-service-name \
+          --image gcr.io/your-gcp-project-id/your-app:$GITHUB_SHA \
+          --region your-region \
+          --platform managed \
+          --allow-unauthenticated
